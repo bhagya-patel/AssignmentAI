@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://via.placeholder.com/150x150/4f46e5/ffffff?text=🎓+AI" alt="AssignmentAI Logo" width="120" height="120" style="border-radius: 20px;"/>
+  <img src="./assets/image.png" alt="AssignmentAI Logo" width="120" height="120" style="border-radius: 20px;"/>
   
   # 🎓 AssignmentAI
 

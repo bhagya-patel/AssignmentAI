@@ -99,9 +99,8 @@ export default function ResetPasswordPage() {
           <div className="bg-slate-50 p-8 sm:p-10" style={{ animation: 'fadeSlideUp 0.4s ease both' }}>
             {/* Logo */}
             <div className="flex items-center gap-2.5 mb-8">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, #6366F1, #8B5CF6)' }}>
-                <Bot className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden shadow-sm ring-1 ring-border bg-white">
+                <img src="/logo.png" alt="Logo" className="w-full h-full object-cover" />
               </div>
               <span className="font-bold text-slate-800">AssignmentAI</span>
             </div>

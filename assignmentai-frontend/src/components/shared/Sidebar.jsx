@@ -111,9 +111,7 @@ export default function Sidebar({ user }) {
         {/* Header / Logo */}
         <div className="px-5 py-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-gradient flex items-center justify-center">
-              <Bot className="w-5 h-5 text-white" />
-            </div>
+            <img src="/logo.png" alt="Logo" className="w-8 h-8 rounded-lg object-cover shadow-sm" />
             <span className="font-bold text-base text-ink-primary tracking-tight">
               Assignment<span className="text-primary">AI</span>
             </span>
