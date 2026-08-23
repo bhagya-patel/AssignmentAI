@@ -8,7 +8,7 @@ import {
   Bot, CheckCircle, AlertTriangle, Clock, ChevronLeft,
   BookOpen, Target, TrendingUp, Shield, MessageSquare, User,
   RefreshCw, Zap, FileText, Lightbulb, ChevronDown, ChevronUp,
-  CheckCircle2, XCircle, AlertCircle, Eye, X
+  CheckCircle2, XCircle, AlertCircle, Eye, X, PenTool
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -405,6 +405,13 @@ export default function ReviewWorkPage() {
                 >
                   {fileLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
                   View Original
+                </button>
+                <button
+                  onClick={() => navigate(`/teacher/handwriting/${submissionId}`)}
+                  className="btn-secondary btn-sm mt-2 w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
+                >
+                  <PenTool className="w-4 h-4" />
+                  Evaluate Handwriting
                 </button>
               </div>
             </div>

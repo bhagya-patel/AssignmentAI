@@ -27,6 +27,7 @@ import TeacherDashboard    from '../pages/teacher/TeacherDashboard';
 import DeployAssignmentPage from '../pages/teacher/DeployAssignmentPage';
 import StudentRequestsPage  from '../pages/teacher/StudentRequestsPage';
 import ReviewWorkPage       from '../pages/teacher/ReviewWorkPage';
+import HandwritingReportPage from '../pages/teacher/HandwritingReportPage';
 import TeacherGradingQueuePage from '../pages/teacher/TeacherGradingQueuePage';
 import TeacherVivaPage      from '../pages/teacher/TeacherVivaPage';
 import TeacherVivaMonitorPage from '../pages/teacher/TeacherVivaMonitorPage';
@@ -167,6 +168,7 @@ export default function AppRouter() {
               <Route path="requests"    element={<StudentRequestsPage />} />
               <Route path="analytics"   element={<TeacherAnalyticsPage />} />
               <Route path="review/:submissionId" element={<ReviewWorkPage />} />
+              <Route path="handwriting/:submissionId" element={<HandwritingReportPage />} />
               <Route path="materials"   element={<TeacherMaterialsPage />} />
               <Route path="profile"     element={<ProfilePage />} />
             </Route>

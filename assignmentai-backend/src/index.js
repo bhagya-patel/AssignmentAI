@@ -17,6 +17,7 @@ const vivaRoutes = require('./routes/viva.routes');
 const materialRoutes = require('./routes/material.routes');
 const requestsRoutes = require('./routes/requests.routes');
 const notificationRoutes = require('./routes/notification.routes');
+const handwritingRoutes = require('./routes/handwriting.routes');
 
 // Start background grading worker (BullMQ + Redis)
 require('./workers/gradingWorker');
@@ -49,6 +50,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/viva', vivaRoutes);
 app.use('/api/materials', materialRoutes);
 app.use('/api/requests', requestsRoutes);
+app.use('/api/handwriting', handwritingRoutes);
 
 // Swagger Documentation Route
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerFile));
