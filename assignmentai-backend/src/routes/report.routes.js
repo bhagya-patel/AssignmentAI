@@ -113,11 +113,11 @@ router.get('/submission/:submissionId/status', requireAuth, async (req, res) => 
     // Check submission status
     const { data: submission } = await supabase
       .from('submissions')
-      .select('status')
+      .select('status, file_url')
       .eq('id', submissionId)
       .single();
 
-    if (!submission) {
+    if (!submission || !submission.file_url) {
       return res.status(404).json({ status: 'not_found' });
     }
 
@@ -153,6 +153,10 @@ router.get('/submission/:submissionId/status', requireAuth, async (req, res) => 
       .select('id')
       .eq('submission_id', submissionId)
       .single();
+
+    if (submission.status === 'failed') {
+      return res.json({ status: 'failed', progress: 0, error: 'AI Grading failed to process.' });
+    }
 
     const isGraded = submission.status === 'graded' || !!aiReport;
 

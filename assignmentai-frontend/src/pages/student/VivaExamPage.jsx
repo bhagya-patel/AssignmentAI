@@ -59,6 +59,7 @@ export default function VivaExamPage() {
   const streamRef = useRef(null);
   const socketRef = useRef(null);
   const recognitionRef = useRef(null);
+  const audioRef = useRef(null); // Tracks the currently playing ElevenLabs audio
   const peerConnectionsRef = useRef({}); // { viewerSocketId: RTCPeerConnection }
   
   const [shouldAutoEnd, setShouldAutoEnd] = useState(false);
@@ -72,13 +73,37 @@ export default function VivaExamPage() {
     videoRef
   });
 
-  // Helper to speak text
-  const speakText = useCallback((text) => {
-    if (!soundOn || !('speechSynthesis' in window)) return;
+  // Helper to speak text via ElevenLabs TTS (falls back to browser speechSynthesis)
+  const speakText = useCallback(async (text) => {
+    if (!soundOn || !text) return;
+
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.rate = 0.95;
-    window.speechSynthesis.speak(utterance);
+
+    try {
+      const response = await api.post(
+        '/viva/tts',
+        { text },
+        { responseType: 'blob' }
+      );
+      const audioUrl = URL.createObjectURL(response.data);
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      audio.onended = () => URL.revokeObjectURL(audioUrl);
+      audio.play();
+    } catch (err) {
+      // Fallback: use browser built-in TTS if ElevenLabs fails
+      console.warn('[TTS] ElevenLabs failed, falling back to browser TTS:', err.message);
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.95;
+        window.speechSynthesis.speak(utterance);
+      }
+    }
   }, [soundOn]);
 
   // Initial load: get session details & first question
@@ -255,6 +280,8 @@ export default function VivaExamPage() {
       if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
       if (recognitionRef.current) recognitionRef.current.stop();
       if (socketRef.current) socketRef.current.disconnect();
+      // Stop ElevenLabs audio playback
+      if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
       // Close all WebRTC peer connections
       Object.values(peerConnectionsRef.current).forEach(pc => pc.close());
       peerConnectionsRef.current = {};
@@ -307,6 +334,11 @@ export default function VivaExamPage() {
 
   const handleSubmitAnswer = async () => {
     if (!answer.trim()) return;
+    // Stop any playing TTS audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
     window.speechSynthesis.cancel();
     setLoadingAI(true);
 

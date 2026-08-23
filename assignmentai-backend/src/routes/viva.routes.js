@@ -3,6 +3,7 @@ const router = express.Router();
 const supabaseAdmin = require('../config/supabaseAdmin');
 const { requireAuth, requireRole } = require('../middleware/auth.middleware');
 const { generateNextVivaQuestion, evaluateVivaSession } = require('../services/grokService');
+const { generateTTS } = require('../services/ttsService');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // We use the existing viva_sessions table schema:
@@ -1100,6 +1101,31 @@ router.post('/sessions/:id/evaluate', requireAuth, requireRole(['student']), asy
   } catch (err) {
     console.error('[Viva POST /evaluate]', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── POST Text-to-Speech via ElevenLabs ─────────────────────────────────────
+// Body: { text: string }
+// Returns: audio/mpeg stream
+router.post('/tts', requireAuth, async (req, res) => {
+  try {
+    const { text } = req.body;
+    if (!text || typeof text !== 'string' || !text.trim()) {
+      return res.status(400).json({ error: '"text" field is required and must be a non-empty string.' });
+    }
+
+    const audioBuffer = await generateTTS(text.trim());
+
+    res.set({
+      'Content-Type': 'audio/mpeg',
+      'Content-Length': audioBuffer.length,
+      'Cache-Control': 'no-cache',
+    });
+    res.send(audioBuffer);
+  } catch (err) {
+    console.error('[Viva POST /tts]', err.message);
+    // Don't expose ElevenLabs error details; let frontend fall back to browser TTS
+    res.status(500).json({ error: 'TTS generation failed.' });
   }
 });
 

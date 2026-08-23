@@ -414,6 +414,7 @@ router.post('/', requireAuth, requireRole(['student']), async (req, res) => {
           console.log(`[SubmissionRoute] Direct grading complete for ${sid}`);
         } catch (err) {
           console.error(`[SubmissionRoute] Direct grading failed for ${sid}:`, err.message);
+          await supabase.from('submissions').update({ status: 'failed' }).eq('id', sid);
         }
       });
     }

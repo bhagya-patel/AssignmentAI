@@ -7,6 +7,7 @@
 
 const { Worker }       = require('bullmq');
 const { createRedisConnection } = require('../config/redisClient');
+const supabaseAdmin    = require('../config/supabaseAdmin');
 const { gradeSubmission }       = require('../services/gradingService');
 
 let gradingWorker = null;
@@ -39,8 +40,15 @@ if (REDIS_URL) try {
     console.log(`[GradingWorker] ✓ Completed job ${job.id} — score: ${result.finalScore}`);
   });
 
-  gradingWorker.on('failed', (job, err) => {
+  gradingWorker.on('failed', async (job, err) => {
     console.error(`[GradingWorker] ✗ Failed job ${job?.id}:`, err.message);
+    if (job?.data?.submissionId) {
+      try {
+        await supabaseAdmin.from('submissions').update({ status: 'failed' }).eq('id', job.data.submissionId);
+      } catch (e) {
+        console.error('[GradingWorker] Could not update status to failed:', e.message);
+      }
+    }
   });
 
   gradingWorker.on('error', (err) => {

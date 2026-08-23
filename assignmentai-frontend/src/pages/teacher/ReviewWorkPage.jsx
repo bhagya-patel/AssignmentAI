@@ -3,11 +3,12 @@ import { useParams, useNavigate } from 'react-router-dom';
 import TopBar from '../../components/shared/TopBar';
 import { useToast } from '../../components/shared/Toast';
 import { getAIReport, getReportStatus, confirmGrade, overrideQuestionScore } from '../../services/reportService';
+import { getDownloadUrl } from '../../services/assignmentService';
 import {
   Bot, CheckCircle, AlertTriangle, Clock, ChevronLeft,
   BookOpen, Target, TrendingUp, Shield, MessageSquare, User,
   RefreshCw, Zap, FileText, Lightbulb, ChevronDown, ChevronUp,
-  CheckCircle2, XCircle, AlertCircle,
+  CheckCircle2, XCircle, AlertCircle, Eye, X
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,30 +50,87 @@ function ConfidenceBadge({ confidence }) {
 }
 
 function ProcessingState({ progress, submissionId }) {
+  // Derive status text based on progress
+  let statusText = "Initializing AI Grading Engine...";
+  if (progress > 20) statusText = "Extracting Submission Text (OCR)...";
+  if (progress > 40) statusText = "Analyzing Answers against Rubric...";
+  if (progress > 60) statusText = "Calculating Confidence Scores...";
+  if (progress > 80) statusText = "Finalizing AI Report...";
+
   return (
-    <div className="flex flex-col items-center justify-center gap-6 py-20">
-      <div className="relative">
-        <div className="w-20 h-20 rounded-full bg-primary-50 flex items-center justify-center">
-          <Bot className="w-10 h-10 text-primary animate-pulse" />
+    <div className="flex flex-col items-center justify-center gap-8 py-24 px-4 w-full">
+      
+      {/* Animated Icon Section */}
+      <div className="relative flex items-center justify-center">
+        {/* Outer glowing rings */}
+        <div className="absolute w-40 h-40 bg-primary/10 rounded-full animate-ping" style={{ animationDuration: '3s' }}></div>
+        <div className="absolute w-32 h-32 bg-primary/20 rounded-full animate-pulse"></div>
+        
+        {/* Inner rotating dash */}
+        <div className="absolute w-28 h-28 rounded-full border-2 border-dashed border-primary/40 animate-[spin_4s_linear_infinite]"></div>
+
+        {/* Center Bot Icon */}
+        <div className="relative z-10 w-20 h-20 bg-gradient-to-br from-primary to-indigo-600 rounded-2xl shadow-xl shadow-primary/30 flex items-center justify-center transform hover:scale-105 transition-transform">
+          <Bot className="w-10 h-10 text-white animate-bounce" style={{ animationDuration: '2s' }} />
         </div>
-        <span className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-          <RefreshCw className="w-3.5 h-3.5 text-white animate-spin" />
+        
+        {/* Floating badge */}
+        <span className="absolute -top-2 -right-2 z-20 w-8 h-8 bg-white rounded-full shadow-md flex items-center justify-center border border-primary/20">
+          <Zap className="w-4 h-4 text-warning" />
         </span>
       </div>
-      <div className="text-center">
-        <p className="text-headline-sm text-ink-primary mb-1">AI Grading in Progress</p>
-        <p className="text-label-md text-ink-secondary">Analysing submission and scoring answers…</p>
-        <p className="text-label-sm text-ink-muted mt-1">ID: {submissionId?.slice(0, 8)}…</p>
-      </div>
-      <div className="w-72">
-        <div className="flex justify-between text-label-sm text-ink-muted mb-2">
-          <span>Processing</span><span>{progress}%</span>
+
+      {/* Typography Section */}
+      <div className="text-center max-w-sm">
+        <h2 className="text-3xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-primary-700 to-indigo-600">
+          AI Grading in Progress
+        </h2>
+        <div className="h-6 flex items-center justify-center">
+          <p className="text-label-md text-ink-secondary animate-pulse">{statusText}</p>
         </div>
-        <div className="h-2 bg-surface-high rounded-full overflow-hidden">
-          <div className="h-full bg-primary rounded-full transition-all duration-700" style={{ width: `${progress}%` }} />
+        <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1 bg-surface-low rounded-full border border-border text-xs text-ink-muted font-mono">
+          <Shield className="w-3.5 h-3.5 text-primary/60" />
+          ID: {submissionId?.slice(0, 8)}…
         </div>
       </div>
-      <p className="text-label-sm text-ink-muted animate-pulse">This usually takes 10–30 seconds</p>
+
+      {/* Advanced Progress Bar */}
+      <div className="w-full max-w-md mt-4">
+        <div className="flex justify-between items-end mb-2">
+          <span className="text-label-sm font-semibold text-primary">Processing...</span>
+          <span className="text-label-sm font-bold text-ink-primary">{progress}%</span>
+        </div>
+        <div className="relative h-3 w-full bg-surface-high rounded-full overflow-hidden shadow-inner">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary via-indigo-500 to-primary rounded-full transition-all duration-700 ease-out" 
+            style={{ 
+              width: `${progress}%`,
+              backgroundSize: '200% 100%',
+              animation: 'gradientMove 2s linear infinite' 
+            }} 
+          >
+            {/* Shimmer effect */}
+            <div className="absolute inset-0 bg-white/20 w-full h-full animate-[shimmer_1.5s_infinite]" style={{ transform: 'skewX(-20deg)' }}></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Footer Text */}
+      <div className="flex items-center gap-2 text-label-sm text-ink-muted mt-2 bg-primary-50/50 px-4 py-2 rounded-lg border border-primary-100">
+        <RefreshCw className="w-3.5 h-3.5 text-primary animate-spin" />
+        This usually takes 10–30 seconds. Please wait.
+      </div>
+      
+      <style dangerouslySetInnerHTML={{__html: `
+        @keyframes gradientMove {
+          0% { background-position: 100% 0; }
+          100% { background-position: -100% 0; }
+        }
+        @keyframes shimmer {
+          0% { transform: translateX(-100%) skewX(-20deg); }
+          100% { transform: translateX(200%) skewX(-20deg); }
+        }
+      `}} />
     </div>
   );
 }
@@ -159,6 +217,10 @@ export default function ReviewWorkPage() {
   const [confirming, setConfirming] = useState(false);
   const [savingQ, setSavingQ] = useState(false);
   const [showOcr, setShowOcr] = useState(false);
+  
+  const [viewingFileUrl, setViewingFileUrl] = useState('');
+  const [fileLoading, setFileLoading] = useState(false);
+  const [showFileModal, setShowFileModal] = useState(false);
 
   const pollRef = useRef(null);
 
@@ -174,8 +236,13 @@ export default function ReviewWorkPage() {
       } else if (status.status === 'failed') {
         clearInterval(pollRef.current);
       }
-    } catch {
-      setJobState(prev => ({ ...prev, status: 'processing', progress: Math.min((prev.progress || 0) + 5, 90) }));
+    } catch (err) {
+      if (err?.response?.status === 404 || err?.response?.data?.status === 'not_found') {
+        clearInterval(pollRef.current);
+        setJobState({ status: 'not_found', progress: 0 });
+      } else {
+        setJobState(prev => ({ ...prev, status: 'processing', progress: Math.min((prev.progress || 0) + 5, 90) }));
+      }
     }
   }, [submissionId]);
 
@@ -195,6 +262,29 @@ export default function ReviewWorkPage() {
 
   // Live total from breakdown
   const liveTotal = breakdown.reduce((sum, item) => sum + (item.score || 0), 0);
+
+  const handleViewFile = async () => {
+    if (!submission?.file_url) {
+      toast({ type: 'warning', title: 'No file attached' });
+      return;
+    }
+    
+    if (viewingFileUrl) {
+      setShowFileModal(true);
+      return;
+    }
+
+    try {
+      setFileLoading(true);
+      const { signedUrl } = await getDownloadUrl({ bucket: 'submissions', path: submission.file_url });
+      setViewingFileUrl(signedUrl);
+      setShowFileModal(true);
+    } catch (err) {
+      toast({ type: 'error', title: 'Failed to load file' });
+    } finally {
+      setFileLoading(false);
+    }
+  };
 
   // Per-question score override
   const handleQuestionOverride = async (questionNumber, newScore) => {
@@ -252,7 +342,18 @@ export default function ReviewWorkPage() {
         {/* Processing State */}
         {jobState.status !== 'completed' && !report && (
           <div className="card">
-            {jobState.status === 'failed' ? (
+            {jobState.status === 'not_found' ? (
+              <div className="flex flex-col items-center gap-4 py-16 text-center">
+                <FileText className="w-16 h-16 text-ink-muted/30 mb-2" />
+                <p className="text-headline-sm text-ink-primary">No Submission Uploaded</p>
+                <p className="text-label-md text-ink-secondary max-w-md">
+                  This student has not uploaded an assignment yet. There is no file to grade.
+                </p>
+                <button className="btn-ghost mt-2" onClick={() => navigate(-1)}>
+                  <ChevronLeft className="w-4 h-4" /> Go Back
+                </button>
+              </div>
+            ) : jobState.status === 'failed' ? (
               <div className="flex flex-col items-center gap-4 py-16 text-center">
                 <AlertTriangle className="w-12 h-12 text-danger" />
                 <p className="text-headline-sm text-ink-primary">Grading Failed</p>
@@ -297,6 +398,14 @@ export default function ReviewWorkPage() {
               <div className="flex flex-col items-center gap-2 shrink-0">
                 <ScoreDonut score={report.final_score} max={maxScore} size={120} />
                 <ConfidenceBadge confidence={analysis.confidence} />
+                <button 
+                  onClick={handleViewFile}
+                  disabled={fileLoading}
+                  className="btn-primary btn-sm mt-2 w-full flex items-center justify-center gap-2"
+                >
+                  {fileLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                  View Original
+                </button>
               </div>
             </div>
 
@@ -547,6 +656,43 @@ export default function ReviewWorkPage() {
               : <CheckCircle className="w-4 h-4" />}
             Confirm & Publish
           </button>
+        </div>
+      )}
+
+      {/* File Viewer Modal */}
+      {showFileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 md:p-8">
+          <div className="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl h-[90vh] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-surface-low">
+              <div className="flex items-center gap-3">
+                <FileText className="w-5 h-5 text-primary" />
+                <h3 className="text-headline-sm text-ink-primary">Student Submission</h3>
+                <span className="text-label-sm text-ink-muted bg-white px-2 py-1 rounded-md border border-border">
+                  {studentName}
+                </span>
+              </div>
+              <button 
+                onClick={() => setShowFileModal(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-surface-high text-ink-secondary hover:text-ink-primary transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 bg-surface-high relative">
+              {viewingFileUrl ? (
+                <iframe 
+                  src={viewingFileUrl} 
+                  className="w-full h-full border-0"
+                  title="Original Submission"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <RefreshCw className="w-8 h-8 text-primary animate-spin mb-4" />
+                  <p className="text-label-md text-ink-secondary">Loading file...</p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </>

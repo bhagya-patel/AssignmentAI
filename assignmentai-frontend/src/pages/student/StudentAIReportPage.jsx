@@ -6,7 +6,7 @@ import { getAIReport, getReportStatus } from '../../services/reportService';
 import {
   Bot, AlertTriangle, Clock, ChevronLeft,
   BookOpen, MessageSquare, RefreshCw, Zap, CheckCircle2,
-  XCircle, AlertCircle, Lightbulb, FileText, ChevronDown, ChevronUp,
+  XCircle, AlertCircle, Lightbulb, FileText, ChevronDown, ChevronUp, Shield
 } from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,6 +131,57 @@ function BreakdownRow({ item }) {
   );
 }
 
+function VivaTabContent({ vivaData }) {
+  if (!vivaData) return null;
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+      <div className="card flex flex-col md:flex-row items-center gap-6">
+        <div className="flex-1 min-w-0 text-center md:text-left">
+          <h2 className="text-headline-sm text-ink-primary flex items-center justify-center md:justify-start gap-2">
+            <Shield className="w-6 h-6 text-indigo-500" />
+            Viva Integrity Evaluation
+          </h2>
+          <p className="text-label-md text-ink-secondary mt-2">
+            This report evaluates how accurately your verbal answers during the Viva session aligned with your written submission, verifying academic integrity.
+          </p>
+          {vivaData.warnings > 0 && (
+            <div className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 bg-danger/10 text-danger rounded-full border border-danger/30 text-xs font-bold">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {vivaData.warnings} Discrepancies Detected
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col items-center shrink-0">
+          <ScoreDonut score={vivaData.integrity_score} max={100} size={120} />
+          <span className="text-label-sm font-semibold mt-2 px-3 py-1 bg-surface-high rounded-full">Integrity Score</span>
+        </div>
+      </div>
+
+      <div className="card border-l-4 border-l-indigo-500">
+        <h3 className="text-title-md font-semibold text-ink-primary flex items-center gap-2 mb-3">
+          <MessageSquare className="w-5 h-5 text-indigo-500" /> AI Rationale
+        </h3>
+        <p className="text-label-md text-ink-secondary leading-relaxed">
+          {vivaData.rationale || "No rationale provided."}
+        </p>
+      </div>
+
+      {vivaData.transcript && (
+        <div className="card">
+          <h3 className="text-title-md font-semibold text-ink-primary flex items-center gap-2 mb-3">
+            <FileText className="w-5 h-5 text-indigo-500" /> Viva Transcript
+          </h3>
+          <div className="p-4 bg-surface-low rounded-lg border border-border">
+            <p className="text-sm text-ink-secondary leading-relaxed whitespace-pre-wrap font-mono">
+              {vivaData.transcript}
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ProcessingState({ progress }) {
   return (
     <div className="flex flex-col items-center justify-center gap-6 py-20">
@@ -171,6 +222,7 @@ export default function StudentAIReportPage() {
   const [report, setReport] = useState(null);
   const [jobState, setJobState] = useState({ status: 'loading', progress: 0 });
   const [showOcr, setShowOcr] = useState(false);
+  const [activeTab, setActiveTab] = useState('written'); // 'written' | 'viva'
 
   const pollRef  = useRef(null);
   const failsRef = useRef(0); // consecutive poll failures
@@ -285,111 +337,135 @@ export default function StudentAIReportPage() {
               </div>
             </div>
 
-            {/* ─ Answer Summary Chips ────────────────────────────────── */}
-            {(report.correct_answers?.length > 0 || report.incorrect_answers?.length > 0 || report.unanswered_questions?.length > 0) && (
-              <div className="card flex flex-col gap-4">
-                <div className="flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-primary" />
-                  <h2 className="text-headline-sm">Answer Summary</h2>
-                </div>
-                <QuestionChips title="Correct" numbers={report.correct_answers} icon={CheckCircle2} colorClass="text-success" />
-                <QuestionChips title="Incorrect / Partial" numbers={report.incorrect_answers} icon={XCircle} colorClass="text-danger" />
-                <QuestionChips title="Not Attempted" numbers={report.unanswered_questions} icon={AlertCircle} colorClass="text-warning" />
-              </div>
-            )}
-
-            {/* ─ Unanswered Questions Alert ──────────────────────────── */}
-            {report.unanswered_questions?.length > 0 && (
-              <div className="flex items-start gap-3 p-4 bg-warning/10 border border-warning/30 rounded-xl">
-                <AlertCircle className="w-5 h-5 text-warning-700 shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-warning-700 mb-1">
-                    {report.unanswered_questions.length} Question{report.unanswered_questions.length > 1 ? 's' : ''} Not Attempted
-                  </p>
-                  <p className="text-label-sm text-warning-600">
-                    Questions {report.unanswered_questions.map(q => `Q${q}`).join(', ')} were not found in your submission.
-                    Make sure to attempt all questions in future assignments.
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* ─ Grammar Quality ─────────────────────────────────────── */}
-            <GrammarBar score={report.grammar_score} />
-
-            {/* ─ Per-Question Breakdown ──────────────────────────────── */}
-            {breakdown.length > 0 && (
-              <div className="card">
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap className="w-5 h-5 text-primary" />
-                  <h2 className="text-headline-sm">Detailed Breakdown</h2>
-                </div>
-                {breakdown.map(item => <BreakdownRow key={item.question} item={item} />)}
-              </div>
-            )}
-
-            {/* ─ Improvement Suggestions ─────────────────────────────── */}
-            {report.improvement_suggestions?.length > 0 && (
-              <div className="card">
-                <div className="flex items-center gap-2 mb-4">
-                  <Lightbulb className="w-5 h-5 text-warning" />
-                  <h2 className="text-headline-sm">Improvement Suggestions</h2>
-                </div>
-                <ul className="flex flex-col gap-3">
-                  {report.improvement_suggestions.map((tip, i) => (
-                    <li key={i} className="flex items-start gap-3 p-3 bg-surface-low rounded-lg border border-border">
-                      <span className="w-6 h-6 rounded-full bg-warning/20 text-warning-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                        Q{tip.question}
-                      </span>
-                      <p className="text-label-md text-ink-primary leading-relaxed">{tip.suggestion}</p>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* ─ Teacher Remarks / AI Summary ────────────────────────── */}
-            {report.feedback_summary && (
-              <div className={`card border ${(submission?.status === 'graded' || report) ? 'border-success/30 bg-success/5' : 'border-primary-100 bg-primary-50/60'}`}>
-                <div className="flex gap-4">
-                  <MessageSquare className={`w-5 h-5 ${(submission?.status === 'graded' || report) ? 'text-success' : 'text-primary'}`} />
-                  <h2 className={`text-headline-sm ${(submission?.status === 'graded' || report) ? 'text-success' : 'text-primary-900'}`}>
-                    {(submission?.status === 'graded' || report) ? 'Teacher Remarks' : 'AI Feedback Summary'}
-                  </h2>
-                </div>
-                <p className={`text-label-md leading-relaxed ${(submission?.status === 'graded' || report) ? 'text-ink-primary' : 'text-primary-800'}`}>
-                  {report.feedback_summary}
-                </p>
-                {report.generated_at && (
-                  <p className="text-label-sm text-ink-muted mt-3">
-                    Generated {new Date(report.generated_at).toLocaleString()} · Powered by Grok
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* ─ OCR Text (collapsible) ──────────────────────────────── */}
-            {report.ocr_text && (
-              <div className="rounded-xl border border-border overflow-hidden">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between px-4 py-3 bg-surface-low hover:bg-surface-high transition-colors"
-                  onClick={() => setShowOcr(o => !o)}
+            {/* Tabs */}
+            {analysis.viva_integrity && (
+              <div className="flex items-center gap-2 p-1 bg-surface-high rounded-xl mb-2 w-full md:w-fit mx-auto border border-border">
+                <button 
+                  onClick={() => setActiveTab('written')}
+                  className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'written' ? 'bg-white text-primary shadow-sm' : 'text-ink-muted hover:text-ink-primary'}`}
                 >
-                  <span className="flex items-center gap-2 text-label-md font-semibold text-ink-primary">
-                    <FileText className="w-4 h-4 text-primary" /> Extracted Text (from your submission)
-                  </span>
-                  {showOcr ? <ChevronUp className="w-4 h-4 text-ink-muted" /> : <ChevronDown className="w-4 h-4 text-ink-muted" />}
+                  Written Assignment
                 </button>
-                {showOcr && (
-                  <div className="p-4 bg-white">
-                    <pre className="text-xs text-ink-secondary whitespace-pre-wrap font-mono max-h-64 overflow-y-auto leading-relaxed">
-                      {report.ocr_text}
-                    </pre>
+                <button 
+                  onClick={() => setActiveTab('viva')}
+                  className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'viva' ? 'bg-white text-indigo-600 shadow-sm' : 'text-ink-muted hover:text-ink-primary'}`}
+                >
+                  Viva Report
+                </button>
+              </div>
+            )}
+
+            {activeTab === 'written' && (
+              <div className="flex flex-col gap-6 animate-in fade-in zoom-in-95 duration-300">
+                {/* ─ Answer Summary Chips ────────────────────────────────── */}
+                {(report.correct_answers?.length > 0 || report.incorrect_answers?.length > 0 || report.unanswered_questions?.length > 0) && (
+                  <div className="card flex flex-col gap-4">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-primary" />
+                      <h2 className="text-headline-sm">Answer Summary</h2>
+                    </div>
+                    <QuestionChips title="Correct" numbers={report.correct_answers} icon={CheckCircle2} colorClass="text-success" />
+                    <QuestionChips title="Incorrect / Partial" numbers={report.incorrect_answers} icon={XCircle} colorClass="text-danger" />
+                    <QuestionChips title="Not Attempted" numbers={report.unanswered_questions} icon={AlertCircle} colorClass="text-warning" />
+                  </div>
+                )}
+
+                {/* ─ Unanswered Questions Alert ──────────────────────────── */}
+                {report.unanswered_questions?.length > 0 && (
+                  <div className="flex items-start gap-3 p-4 bg-warning/10 border border-warning/30 rounded-xl">
+                    <AlertCircle className="w-5 h-5 text-warning-700 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-warning-700 mb-1">
+                        {report.unanswered_questions.length} Question{report.unanswered_questions.length > 1 ? 's' : ''} Not Attempted
+                      </p>
+                      <p className="text-label-sm text-warning-600">
+                        Questions {report.unanswered_questions.map(q => `Q${q}`).join(', ')} were not found in your submission.
+                        Make sure to attempt all questions in future assignments.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* ─ Grammar Quality ─────────────────────────────────────── */}
+                <GrammarBar score={report.grammar_score} />
+
+                {/* ─ Per-Question Breakdown ──────────────────────────────── */}
+                {breakdown.length > 0 && (
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Zap className="w-5 h-5 text-primary" />
+                      <h2 className="text-headline-sm">Detailed Breakdown</h2>
+                    </div>
+                    {breakdown.map(item => <BreakdownRow key={item.question} item={item} />)}
+                  </div>
+                )}
+
+                {/* ─ Improvement Suggestions ─────────────────────────────── */}
+                {report.improvement_suggestions?.length > 0 && (
+                  <div className="card">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Lightbulb className="w-5 h-5 text-warning" />
+                      <h2 className="text-headline-sm">Improvement Suggestions</h2>
+                    </div>
+                    <ul className="flex flex-col gap-3">
+                      {report.improvement_suggestions.map((tip, i) => (
+                        <li key={i} className="flex items-start gap-3 p-3 bg-surface-low rounded-lg border border-border">
+                          <span className="w-6 h-6 rounded-full bg-warning/20 text-warning-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                            Q{tip.question}
+                          </span>
+                          <p className="text-label-md text-ink-primary leading-relaxed">{tip.suggestion}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* ─ Teacher Remarks / AI Summary ────────────────────────── */}
+                {report.feedback_summary && (
+                  <div className={`card border ${(submission?.status === 'graded' || report) ? 'border-success/30 bg-success/5' : 'border-primary-100 bg-primary-50/60'}`}>
+                    <div className="flex gap-4">
+                      <MessageSquare className={`w-5 h-5 ${(submission?.status === 'graded' || report) ? 'text-success' : 'text-primary'}`} />
+                      <h2 className={`text-headline-sm ${(submission?.status === 'graded' || report) ? 'text-success' : 'text-primary-900'}`}>
+                        {(submission?.status === 'graded' || report) ? 'Teacher Remarks' : 'AI Feedback Summary'}
+                      </h2>
+                    </div>
+                    <p className={`text-label-md leading-relaxed ${(submission?.status === 'graded' || report) ? 'text-ink-primary' : 'text-primary-800'}`}>
+                      {report.feedback_summary}
+                    </p>
+                    {report.generated_at && (
+                      <p className="text-label-sm text-ink-muted mt-3">
+                        Generated {new Date(report.generated_at).toLocaleString()} · Powered by Grok
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* ─ OCR Text (collapsible) ──────────────────────────────── */}
+                {report.ocr_text && (
+                  <div className="rounded-xl border border-border overflow-hidden">
+                    <button
+                      type="button"
+                      className="w-full flex items-center justify-between px-4 py-3 bg-surface-low hover:bg-surface-high transition-colors"
+                      onClick={() => setShowOcr(o => !o)}
+                    >
+                      <span className="flex items-center gap-2 text-label-md font-semibold text-ink-primary">
+                        <FileText className="w-4 h-4 text-primary" /> Extracted Text (from your submission)
+                      </span>
+                      {showOcr ? <ChevronUp className="w-4 h-4 text-ink-muted" /> : <ChevronDown className="w-4 h-4 text-ink-muted" />}
+                    </button>
+                    {showOcr && (
+                      <div className="p-4 bg-white">
+                        <pre className="text-xs text-ink-secondary whitespace-pre-wrap font-mono max-h-64 overflow-y-auto leading-relaxed">
+                          {report.ocr_text}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             )}
+
+            {activeTab === 'viva' && <VivaTabContent vivaData={analysis.viva_integrity} />}
           </>
         )}
       </main>
