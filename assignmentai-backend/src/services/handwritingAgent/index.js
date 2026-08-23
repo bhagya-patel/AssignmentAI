@@ -14,6 +14,7 @@ const { extractAllPages } = require('./visionOCR');
 const { parseAnswers } = require('./answerParser');
 const { evaluateAllAnswers } = require('./evaluationEngine');
 const { validateAndFinalize } = require('./validator');
+const { checkRelevance } = require('./relevanceChecker');
 
 // ──────────────────────────────────────────────────────────────────────
 // Internal helpers
@@ -149,6 +150,54 @@ async function evaluateHandwrittenSubmission(submissionId, onProgress = async ()
       throw new Error('Could not extract any readable handwritten text from the submission.');
     }
 
+    // ── Step 6.5: Verify Topic Relevance ───────────────────────────
+    const aiConfig = await fetchAIConfig();
+    console.log('[HandwritingAgent] Checking topic relevance...');
+    const relevance = await checkRelevance(ocrResult.fullText, questionText, aiConfig?.primary_model || 'grok-3');
+    await onProgress(58);
+
+    if (!relevance.is_relevant) {
+      console.warn(`[HandwritingAgent] Submission rejected as irrelevant: ${relevance.reason}`);
+      
+      const finalReport = {
+        submission_id: submissionId,
+        status: 'completed',
+        question_results: [],
+        total_marks: 0,
+        max_marks: assignment.max_marks || 100,
+        overall_percentage: 0,
+        performance_level: 'Irrelevant Subject',
+        strong_areas: [],
+        weak_areas: ['Complete Subject Mismatch'],
+        suggestions: [relevance.reason, 'Zero marks awarded because the submission does not answer the assigned topic.'],
+        ocr_confidence: ocrResult.avgConfidence,
+        pages_processed: pageImages.length,
+        needs_manual_review: true,
+        is_relevant: false
+      };
+
+      await supabaseAdmin.from('handwriting_reports').upsert(finalReport, { onConflict: 'submission_id' });
+      await onProgress(100);
+
+      try {
+        const io = socketManager.getIO();
+        if (submission.student_id) {
+          io.to(`user_${submission.student_id}`).emit('handwriting_evaluation_complete', {
+            submission_id: submissionId,
+            score: 0,
+            max_score: finalReport.max_marks,
+            message: 'Evaluation rejected: Irrelevant subject matter.',
+          });
+        }
+      } catch (err) {}
+
+      return {
+        submissionId,
+        studentId: submission.student_id,
+        ...finalReport,
+      };
+    }
+
     // ── Step 7: Parse answers into Q&A pairs ───────────────────────
     console.log('[HandwritingAgent] Parsing extracted text into Q&A pairs...');
     const parsed = parseAnswers(ocrResult.fullText, {
@@ -158,7 +207,6 @@ async function evaluateHandwrittenSubmission(submissionId, onProgress = async ()
     await onProgress(60);
 
     // ── Step 8: Get AI config for model settings ───────────────────
-    const aiConfig = await fetchAIConfig();
     const strictnessVal = assignment.ai_strictness || 50;
     const strictness = strictnessVal >= 75 ? 'strict' : strictnessVal >= 40 ? 'balanced' : 'lenient';
 
@@ -208,6 +256,7 @@ async function evaluateHandwrittenSubmission(submissionId, onProgress = async ()
           suggestions: finalReport.suggestions,
           ocr_confidence: finalReport.ocr_confidence,
           pages_processed: pageImages.length,
+          is_relevant: true,
         },
         { onConflict: 'submission_id' }
       );

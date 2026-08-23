@@ -63,7 +63,8 @@ async function evaluateAnswer(params) {
 IMPORTANT RULES:
 - Evaluate ACADEMIC CONTENT only, NOT handwriting quality.
 - Do NOT reduce marks because handwriting is messy, slow-looking, or stylistically different.
-- Only penalize if the content itself is wrong, incomplete, or irrelevant.
+- **STRICT REQUIREMENT**: If the answer is missing key concepts asked in the question, you MUST deduct marks for those missing points. Do not give full marks for incomplete answers.
+- **STRICT REQUIREMENT**: Only award marks for correct, relevant points. If the student answers a completely different question or topic, award 0 marks.
 - Award partial marks for partially correct answers.
 - Do NOT penalize the same mistake twice.
 - If the reference answer is not available, use the question context and subject knowledge.

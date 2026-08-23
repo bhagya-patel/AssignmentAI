@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS handwriting_reports (
   weak_areas        JSONB DEFAULT '[]'::jsonb,
   suggestions       JSONB DEFAULT '[]'::jsonb,
 
+  -- Relevance flag
+  is_relevant       BOOLEAN DEFAULT TRUE,
+
   -- OCR metadata
   ocr_confidence    NUMERIC,
   pages_processed   INTEGER DEFAULT 0,
